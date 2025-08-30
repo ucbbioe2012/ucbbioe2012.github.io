@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anesthesiology Resident Quick Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Style for the PACU content to render markdown-like headers */
+        .pacu-content h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }
+        .pacu-content h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+        .pacu-content h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .pacu-content p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .pacu-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+        .pacu-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .pacu-content th, .pacu-content td { border: 1px solid #cbd5e1; padding: 0.5rem; text-align: left; }
+        .pacu-content th { background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-64 bg-gray-800 text-white flex-shrink-0">
+            <div class="p-4">
+                <h1 class="text-xl font-bold text-center md:text-left">Anesco Guide</h1>
+                <p class="text-sm text-gray-400 text-center md:text-left">Resident Quick Reference</p>
+            </div>
+             <nav class="w-full">
+                <div class="flex flex-row md:flex-col">
+                    <!-- Tab buttons -->
+                    <button id="peds-tab-btn" class="flex-grow text-center p-3 md:p-4 md:text-left border-b-4 md:border-b-0 md:border-l-4 border-indigo-500 text-white bg-gray-700 hover:bg-gray-600 focus:outline-none transition-colors duration-200">
+                        Pediatric Calculator
+                    </button>
+                    <button id="pacu-tab-btn" class="flex-grow text-center p-3 md:p-4 md:text-left border-b-4 md:border-b-0 md:border-l-4 border-transparent text-gray-300 hover:text-white hover:bg-gray-600 focus:outline-none transition-colors duration-200">
+                        PACU Management
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            
+            <!-- Pediatric Calculator Content -->
+            <div id="peds-content">
+                <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-800">Pediatric Anesthesia Calculator</h2>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="age" class="block text-sm font-medium text-gray-700">Age (years)</label>
+                            <input type="number" id="age" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 5">
+                        </div>
+                        <div>
+                            <label for="weight" class="block text-sm font-medium text-gray-700">Weight (kg)</label>
+                            <input type="number" id="weight" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 20">
+                        </div>
+                        <div>
+                            <label for="height" class="block text-sm font-medium text-gray-700">Height (cm)</label>
+                            <input type="number" id="height" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 110">
+                        </div>
+                    </div>
+                    <div class="mt-6 text-right">
+                        <button id="calculate-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Calculate
+                        </button>
+                    </div>
+                </div>
+
+                <div id="results" class="mt-8 hidden">
+                    <h3 class="text-lg md:text-xl font-bold mb-4 text-gray-800">Results</h3>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h4 class="text-base md:text-lg font-semibold text-gray-700">ETT Size (Uncuffed)</h4>
+                        <p id="ett-size" class="text-xl md:text-2xl font-bold text-indigo-600 mt-2"></p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-4">Medication Dosages</h4>
+                        <div class="overflow-x-auto">
+                            <table id="med-table" class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medication</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calculated Dose</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dose Range</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="med-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Rows will be inserted here by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PACU Management Content -->
+            <div id="pacu-content" class="hidden">
+                <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-800">PACU Symptom Management</h2>
+                
+                <div class="relative bg-white p-6 rounded-lg shadow-md">
+                    <label for="pacu-search" class="block text-sm font-medium text-gray-700">Search for a symptom</label>
+                    <input type="text" id="pacu-search" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., Hypertension, Hypoxia, Shivering...">
+                    <div id="suggestions-box" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg hidden">
+                        <!-- Suggestions will be populated here -->
+                    </div>
+                </div>
+
+                <div id="pacu-result-display" class="mt-8 bg-white p-6 rounded-lg shadow-md hidden">
+                    <!-- Selected symptom content will be displayed here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const App = {
+            // --- INITIALIZATION ---
+            init() {
+                this.cacheDOMElements();
+                this.setupTabSwitching();
+                this.PedsCalculator.init();
+                this.PacuManager.init();
+            },
+
+            // --- DOM ELEMENT CACHING ---
+            cacheDOMElements() {
+                this.dom = {
+                    pedsTabBtn: document.getElementById('peds-tab-btn'),
+                    pacuTabBtn: document.getElementById('pacu-tab-btn'),
+                    pedsContent: document.getElementById('peds-content'),
+                    pacuContent: document.getElementById('pacu-content'),
+                };
+            },
+
+            // --- TAB SWITCHING LOGIC ---
+            setupTabSwitching() {
+                this.dom.pedsTabBtn.addEventListener('click', () => {
+                    this.dom.pedsContent.classList.remove('hidden');
+                    this.dom.pacuContent.classList.add('hidden');
+                    this.updateTabStyles(this.dom.pedsTabBtn);
+                });
+
+                this.dom.pacuTabBtn.addEventListener('click', () => {
+                    this.dom.pacuContent.classList.remove('hidden');
+                    this.dom.pedsContent.classList.add('hidden');
+                    this.updateTabStyles(this.dom.pacuTabBtn);
+                });
+            },
+            
+            updateTabStyles(activeButton) {
+                [this.dom.pedsTabBtn, this.dom.pacuTabBtn].forEach(button => {
+                    button.classList.remove('border-indigo-500', 'text-white', 'bg-gray-700');
+                    button.classList.add('border-transparent', 'text-gray-300');
+                });
+                activeButton.classList.add('border-indigo-500', 'text-white', 'bg-gray-700');
+                activeButton.classList.remove('border-transparent', 'text-gray-300');
+            },
+
+            // --- MODULE FOR PEDIATRIC CALCULATOR ---
+            PedsCalculator: {
+                data: [
+                    { medication: "Propofol", dose: "2.5-3.5 mg/kg IV", category: "Induction Agents" },
+                    { medication: "Etomidate", dose: "0.2-0.4 mg/kg IV", category: "Induction Agents" },
+                    { medication: "Ketamine", dose: "1-2 mg/kg IV, 4-6 mg/kg IM", category: "Induction Agents" },
+                    { medication: "Succinylcholine", dose: "1-2 mg/kg IV", category: "NMBAs" },
+                    { medication: "Rocuronium", dose: "0.6-1.2 mg/kg IV", category: "NMBAs" },
+                    { medication: "Vecuronium", dose: "0.08-0.1 mg/kg IV", category: "NMBAs" },
+                    { medication: "Cisatracurium", dose: "0.1-0.15 mg/kg IV", category: "NMBAs" },
+                    { medication: "Fentanyl", dose: "1-2 mcg/kg IV", category: "Pain Medications" },
+                    { medication: "Morphine", dose: "0.05-0.1 mg/kg IV", category: "Pain Medications" },
+                    { medication: "Hydromorphone", dose: "0.01-0.02 mg/kg IV", category: "Pain Medications" },
+                    { medication: "Ondansetron", dose: "0.1 mg/kg IV (max 4 mg)", category: "PONV Prophylaxis" },
+                    { medication: "Dexamethasone", dose: "0.1-0.5 mg/kg IV (max 8 mg)", category: "PONV Prophylaxis" },
+                    { medication: "Midazolam", dose: "0.05-0.1 mg/kg IV", category: "Sedation Medications" },
+                    { medication: "Dexmedetomidine", dose: "0.5-1 mcg/kg load over 10 min", category: "Sedation Medications" },
+                    { medication: "Epinephrine", dose: "1 mcg/kg IV for hypotension; 10 mcg/kg IV for cardiac arrest", category: "Emergency Medications" },
+                    { medication: "Phenylephrine", dose: "0.5-1 mcg/kg IV bolus", category: "Emergency Medications" },
+                    { medication: "Atropine", dose: "0.02 mg/kg IV (min 0.1 mg)", category: "Emergency Medications" },
+                ],
+                init() {
+                    this.cacheDOMElements();
+                    this.elements.calculateBtn.addEventListener('click', () => this.calculate());
+                },
+                cacheDOMElements() {
+                    this.elements = {
+                        calculateBtn: document.getElementById('calculate-btn'),
+                        ageInput: document.getElementById('age'),
+                        weightInput: document.getElementById('weight'),
+                        resultsDiv: document.getElementById('results'),
+                        ettSizeEl: document.getElementById('ett-size'),
+                        medTableBody: document.getElementById('med-table-body'),
+                    };
+                },
+                calculate() {
+                    const age = parseFloat(this.elements.ageInput.value);
+                    const weight = parseFloat(this.elements.weightInput.value);
+
+                    if (isNaN(age) || isNaN(weight) || age <= 0 || weight <= 0) {
+                        alert('Please enter valid age and weight.');
+                        return;
+                    }
+
+                    // ETT Calculation
+                    if (age > 18) {
+                        this.elements.ettSizeEl.textContent = 'Formula is for patients up to 18 years old.';
+                    } else {
+                        const ettSize = 3.5 + (age / 4);
+                        const roundedEtt = (Math.round(ettSize * 2) / 2).toFixed(1);
+                        this.elements.ettSizeEl.textContent = `${roundedEtt} mm`;
+                    }
+
+                    // Medication Table Calculation
+                    this.elements.medTableBody.innerHTML = '';
+                    this.data.forEach(med => {
+                        const row = document.createElement('tr');
+                        const calculatedDose = this.calculateDose(med.dose, weight);
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${med.medication}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${med.dose}</td>
+                        `;
+                        this.elements.medTableBody.appendChild(row);
+                    });
+
+                    this.elements.resultsDiv.classList.remove('hidden');
+                },
+                calculateDose(doseString, weight) {
+                    const doseMatch = doseString.match(/([\d\.-]+)/g) || [];
+                    const numbers = doseMatch.map(parseFloat);
+
+                    if (numbers.length === 0) return 'N/A';
+
+                    let finalDose = '';
+                    
+                    if (doseString.includes('-')) {
+                        const low = (numbers[0] * weight).toFixed(2);
+                        const high = (numbers[1] * weight).toFixed(2);
+                        finalDose = `${low} - ${high}`;
+                    } else {
+                        finalDose = (numbers[0] * weight).toFixed(2);
+                    }
+
+                    const unit = (doseString.match(/(mcg|mg)/) || ['unit'])[0];
+                    finalDose += ` ${unit}`;
+                    
+                    if (doseString.includes('max')) {
+                        const maxDose = parseFloat((doseString.match(/max ([\d\.]+)/) || [])[1]);
+                        const calculatedSingleDose = parseFloat(finalDose);
+                        if (!isNaN(maxDose) && calculatedSingleDose > maxDose) {
+                            finalDose = `${maxDose} ${unit} (max)`;
+                        }
+                    }
+                    
+                    if (doseString.includes('min')) {
+                        const minDose = parseFloat((doseString.match(/min ([\d\.]+)/) || [])[1]);
+                        const calculatedSingleDose = parseFloat(finalDose);
+                        if (!isNaN(minDose) && calculatedSingleDose < minDose) {
+                            finalDose = `${minDose} ${unit} (min)`;
+                        }
+                    }
+
+                    return finalDose;
+                }
+            },
+
+            // --- MODULE FOR PACU MANAGEMENT ---
+            PacuManager: {
+                data: [
+                    { symptom: "Hypertension", content: `<h3>Key Points</h3><ul><li>Definition: Systolic blood pressure (SBP) > 160 mmHg, diastolic blood pressure (DBP) > 90 mmHg, or an elevation of 20-30% above the patient's baseline.</li><li>Primary Cause: Pain is the most common cause of secondary hypertension in the PACU.</li><li>Initial Approach: Management should always be directed at identifying and treating the underlying cause before initiating antihypertensive medications.</li></ul><h3>Common Secondary Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>A</td><td>Analgesic deficiency (Pain), Anxiety, Autonomic dysreflexia</td></tr><tr><td>B</td><td>Bladder distension, Disordered Breathing (Hypoxia, Hypercapnia)</td></tr><tr><td>C</td><td>Catecholamines (stress response), Cold (Hypothermia)</td></tr><tr><td>D</td><td>Drugs (e.g., vasopressors, ketamine), Drug withdrawal (β-blockers, α-agonists)</td></tr><tr><td>E</td><td>Emergence excitation, Elevated Intracranial Pressure (ICP), Excessive hydration</td></tr></table>` },
+                    { symptom: "Hypotension", content: `<h3>Key Points</h3><ul><li>Definition: SBP < 90 mmHg, Mean Arterial Pressure (MAP) < 60 mmHg, or a drop of 20-30% below baseline.</li><li>Primary Cause: Most postoperative hypotension is due to hypovolemia and is responsive to fluid administration.</li><li>Initial Approach: Assess for signs of inadequate organ perfusion. A fluid challenge is appropriate for most patients.</li></ul><h3>Differential Diagnosis</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Decreased Preload</td><td>Hypovolemia (hemorrhage, third-spacing), Venodilation (neuraxial/residual anesthetics), Increased intrathoracic pressure</td></tr><tr><td>Decreased Cardiac Output</td><td>Bradycardia, Tachyarrhythmias, Myocardial ischemia/infarction, Cardiac tamponade</td></tr><tr><td>Decreased SVR</td><td>Sepsis, Anaphylaxis, SIRS, Adrenal insufficiency</td></tr></table>` },
+                    { symptom: "Dysrhythmia", content: `<h3>Key Points</h3><ul><li>New perioperative dysrhythmias require prompt assessment of adequacy of ventilation, hemodynamics, electrolytes, and possible cardiac ischemia.</li><li>Atrial fibrillation is common and often related to atrial stretch from volume shifts.</li><li>Many dysrhythmias are transient and require only supportive care.</li></ul><h3>Management of Stable Dysrhythmia</h3><ul><li>Stable Bradycardia: Atropine 0.5-1 mg IV.</li><li>Stable SVT: Vagal maneuvers, then Adenosine 6-12 mg IV.</li><li>Stable Atrial Fibrillation/Flutter: Rate control with Metoprolol 1-5 mg IV or Diltiazem.</li><li>Stable Wide-Complex Tachycardia: Consider VT. Amiodarone 150 mg IV over 10 min.</li></ul>` },
+                    { symptom: "Hypoxia", content: `<h3>Key Points</h3><ul><li>Very Common: Hypoxia (SpO2 < 92%) is a frequent PACU event.</li><li>Primary Causes: Hypoventilation and ateletasis are the most common culprits.</li><li>Initial Response: Most cases respond to simple maneuvers and supplemental oxygen.</li></ul><h3>Common Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Airway Obstruction</td><td>Tongue falling back, laryngospasm, edema, hematoma.</td></tr><tr><td>Parenchymal/Vascular</td><td>Atelectasis, pulmonary edema, pulmonary embolism, aspiration pneumonitis.</td></tr><tr><td>Ventilatory Failure</td><td>Hypoventilation from residual anesthetics, opioids, or neuromuscular blockade.</td></tr><tr><td>Other</td><td>Bronchospasm, pneumothorax.</td></tr></table>` },
+                    { symptom: "Wheezing and Stridor", content: `<h3>Key Points</h3><ul><li>Stridor is an airway emergency, indicating upper airway obstruction.</li><li>Wheezing indicates lower airway obstruction (bronchoconstriction).</li><li>Distinguish the two: Stridor is a high-pitched inspiratory sound (neck). Wheezing is a musical, expiratory sound (chest).</li></ul><h3>Management</h3><ul><li>Stridor: Administer 100% O2 with CPAP. Consider racemic epinephrine, steroids. High suspicion for hematoma after neck surgery. Prepare to re-intubate.</li><li>Wheezing: Administer inhaled beta-agonist (e.g., Albuterol). Consider cause (asthma, anaphylaxis, pulmonary edema).</li></ul>` },
+                    { symptom: "Delirium", content: `<h3>Key Points</h3><ul><li>Definition: An acute disturbance in attention and cognition with a fluctuating course.</li><li>Initial Approach: Rule out and correct life-threatening causes, especially hypoxia, hypotension, and hypoglycemia.</li></ul><h3>Common Reversible Causes ("PACU" Mnemonic)</h3><ul><li>P: Pain</li><li>A: Anxiety, Alcohol withdrawal</li><li>C: Constipation / Full Bladder</li><li>U: Underlying Illness (Hypoxia, Hypoglycemia, Hypotension, Infection)</li></ul>` },
+                    { symptom: "Delayed Emergence", content: `<h3>Key Points</h3><ul><li>Definition: Failure to regain consciousness 30-60 minutes after the end of anesthesia.</li><li>Common Causes: Residual drug effects and metabolic disturbances.</li></ul><h3>Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Pharmacologic</td><td>Residual anesthetics, Opioids, Benzodiazepines, Residual NMB.</td></tr><tr><td>Metabolic</td><td>Hypoglycemia, Hypoxia, Hypercarbia, Hypothermia.</td></tr><tr><td>Neurologic</td><td>Stroke, Seizure, Increased ICP.</td></tr></table>` },
+                    { symptom: "Shivering", content: `<h3>Key Points</h3><ul><li>High Incidence: Very common after anesthesia.</li><li>Physiologic Stress: Dramatically increases oxygen consumption.</li></ul><h3>Management</h3><ol><li>Rule out other causes of shaking (rigors, seizure).</li><li>Assess core temperature. If hypothermic (<36.0°C), begin active rewarming.</li><li>Pharmacological Treatment (if normothermic): Meperidine 12.5-25 mg IV. Alternatives include Clonidine 30-75 mcg IV or Fentanyl 25-50 mcg IV.</li></ol>` },
+                    { symptom: "Nausea & Vomiting (PONV)", content: `<h3>Key Points</h3><ul><li>Very Common. Leading cause of patient dissatisfaction.</li><li>Rescue Therapy: For breakthrough PONV, use an antiemetic from a different mechanistic class than the prophylactic agent(s).</li></ul><h3>Rescue Antiemetic Classes</h3><ul><li>5-HT3 Antagonist: Ondansetron</li><li>Dopamine Antagonist: Droperidol, Prochlorperazine</li><li>Antihistamine: Diphenhydramine</li><li>Steroid: Dexamethasone</li></ul>` },
+                    { symptom: "Pain", content: `<h3>Key Points</h3><ul><li>Multimodal Analgesia is the Standard of Care.</li><li>Assessment is Key. Use a validated pain scale.</li></ul><h3>Approach for Severe Pain (7-10/10)</h3><ol><li>Administer small, frequent doses of a titrated IV opioid (Morphine 1-4 mg, Hydromorphone 0.2-1 mg, or Fentanyl 25-50 mcg).</li><li>Reassess pain and sedation after each dose.</li><li>Administer a non-opioid analgesic (e.g., Ketorolac 15-30 mg IV or Acetaminophen 1g IV) as a baseline.</li></ol>` }
+                ],
+                init() {
+                    this.cacheDOMElements();
+                    this.elements.searchInput.addEventListener('keyup', () => this.handleSearch());
+                    document.addEventListener('click', (event) => this.hideSuggestions(event));
+                },
+                cacheDOMElements() {
+                    this.elements = {
+                        searchInput: document.getElementById('pacu-search'),
+                        suggestionsBox: document.getElementById('suggestions-box'),
+                        resultDisplay: document.getElementById('pacu-result-display'),
+                    };
+                },
+                handleSearch() {
+                    const query = this.elements.searchInput.value.toLowerCase();
+                    this.elements.suggestionsBox.innerHTML = '';
+                    if (query.length < 2) {
+                        this.elements.suggestionsBox.classList.add('hidden');
+                        return;
+                    }
+
+                    const filteredSymptoms = this.data.filter(item => item.symptom.toLowerCase().includes(query));
+
+                    if (filteredSymptoms.length > 0) {
+                        filteredSymptoms.forEach(item => {
+                            const suggestionDiv = document.createElement('div');
+                            suggestionDiv.textContent = item.symptom;
+                            suggestionDiv.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                            suggestionDiv.addEventListener('click', () => {
+                                this.displaySymptom(item);
+                                this.elements.searchInput.value = item.symptom;
+                                this.elements.suggestionsBox.classList.add('hidden');
+                            });
+                            this.elements.suggestionsBox.appendChild(suggestionDiv);
+                        });
+                        this.elements.suggestionsBox.classList.remove('hidden');
+                    } else {
+                        this.elements.suggestionsBox.classList.add('hidden');
+                    }
+                },
+                displaySymptom(symptom) {
+                    this.elements.resultDisplay.innerHTML = `
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">${symptom.symptom}</h3>
+                        <div class="pacu-content">${symptom.content}</div>
+                    `;
+                    this.elements.resultDisplay.classList.remove('hidden');
+                },
+                hideSuggestions(event) {
+                    if (!this.elements.searchInput.contains(event.target) && !this.elements.suggestionsBox.contains(event.target)) {
+                        this.elements.suggestionsBox.classList.add('hidden');
+                    }
+                }
+            }
+        };
+
+        // --- START THE APP ---
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
+
