@@ -621,10 +621,11 @@
                         
                         if (colorClass) row.classList.add(colorClass);
                         
+                        // MODIFICATION: Removed 'whitespace-nowrap' from the class lists of the <td> elements
                         row.innerHTML = `
-                            <td data-label="Medication" class="px-6 py-4 whitespace-nowrap text-sm font-medium">${med.medication}</td>
-                            <td data-label="Calculated Dose" class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
-                            <td data-label="Dose Range" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${fullDoseString}</td>
+                            <td data-label="Medication" class="px-6 py-4 text-sm font-medium">${med.medication}</td>
+                            <td data-label="Calculated Dose" class="px-6 py-4 text-sm text-gray-700 font-semibold">${calculatedDose}</td>
+                            <td data-label="Dose Range" class="px-6 py-4 text-sm text-gray-500">${fullDoseString}</td>
                         `;
                         this.elements.medTableBody.appendChild(row);
                     });
