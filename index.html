@@ -9,6 +9,9 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
         }
         /* Custom scrollbar for better aesthetics */
         ::-webkit-scrollbar {
@@ -33,6 +36,85 @@
         .pacu-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
         .pacu-content th, .pacu-content td { border: 1px solid #cbd5e1; padding: 0.5rem; text-align: left; }
         .pacu-content th { background-color: #f1f5f9; }
+        
+        /* --- Flippable Roller Styles --- */
+        .roller-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .roller-flipper {
+            position: relative;
+            height: 60px;
+            width: 90px;
+            perspective: 500px;
+            cursor: ns-resize;
+        }
+        .roller-flipper.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .roller-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 60px;
+            text-align: center;
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            backface-visibility: hidden; /* Important for clean flips */
+        }
+        .roller-label {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        /* Animation Setup */
+        .roller-top {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 50%;
+            overflow: hidden;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        .roller-bottom {
+            position: absolute;
+            top: 50%; left: 0;
+            width: 100%; height: 50%;
+            overflow: hidden;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .roller-bottom span {
+            display: block;
+            transform: translateY(-50%);
+        }
+
+        .roller-flipper.animating .before .roller-top {
+            transform-origin: bottom center;
+            animation: flip-up-top 0.3s ease-in forwards;
+        }
+        .roller-flipper.animating .after .roller-bottom {
+            transform-origin: top center;
+            transform: rotateX(90deg);
+            animation: flip-up-bottom 0.3s ease-in-out 0.3s forwards;
+        }
+        
+        @keyframes flip-up-top {
+            to { transform: rotateX(-90deg); }
+        }
+        @keyframes flip-up-bottom {
+            from { transform: rotateX(90deg); }
+            to { transform: rotateX(0deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -65,20 +147,25 @@
                 <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-800">Pediatric Anesthesia Calculator</h2>
                 
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label for="age" class="block text-sm font-medium text-gray-700">Age (years)</label>
-                            <input type="number" id="age" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <div id="age-roller-container" class="roller-container"></div>
+                        <div id="weight-roller-container" class="roller-container"></div>
+                        <div id="height-roller-container" class="roller-container"></div>
+                    </div>
+
+                    <div class="flex justify-center mt-4">
+                         <div class="flex items-center">
+                            <input id="preterm-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <label for="preterm-checkbox" class="ml-2 block text-sm text-gray-900">Preterm</label>
                         </div>
-                        <div>
-                            <label for="weight" class="block text-sm font-medium text-gray-700">Weight (kg)</label>
-                            <input type="number" id="weight" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 20">
-                        </div>
-                        <div>
-                            <label for="height" class="block text-sm font-medium text-gray-700">Height (cm)</label>
-                            <input type="number" id="height" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., 110">
+                        <div class="ml-4">
+                             <select id="age-unit" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="years">Years</option>
+                                <option value="months">Months</option>
+                            </select>
                         </div>
                     </div>
+
                     <div class="mt-6 text-right">
                         <button id="calculate-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Calculate
@@ -89,8 +176,16 @@
                 <div id="results" class="mt-8 hidden">
                     <h3 class="text-lg md:text-xl font-bold mb-4 text-gray-800">Results</h3>
                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <h4 class="text-base md:text-lg font-semibold text-gray-700">ETT Size (Uncuffed)</h4>
-                        <p id="ett-size" class="text-xl md:text-2xl font-bold text-indigo-600 mt-2"></p>
+                        <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-4">Airway Equipment</h4>
+                        <div id="airway-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            <!-- Airway results will be inserted here -->
+                        </div>
+                    </div>
+                     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-4">Vitals</h4>
+                        <div id="vitals-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            <!-- Vitals results will be inserted here -->
+                        </div>
                     </div>
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-4">Medication Dosages</h4>
@@ -176,110 +271,363 @@
                 activeButton.classList.remove('border-transparent', 'text-gray-300');
             },
 
+            // --- ROLLER FACTORY ---
+            RollerFactory: {
+                create(containerId, options) {
+                    const { label, min, max, initial, step = 1, unit = '' } = options;
+                    const container = document.getElementById(containerId);
+                    
+                    container.innerHTML = `
+                        <div class="roller-flipper" id="${containerId}-flipper">
+                            <div class="roller-card before" id="${containerId}-before"></div>
+                            <div class="roller-card after" id="${containerId}-after"></div>
+                        </div>
+                        <span class="roller-label">${label}</span>
+                    `;
+
+                    const flipper = document.getElementById(`${containerId}-flipper`);
+                    const beforeCard = document.getElementById(`${containerId}-before`);
+                    const afterCard = document.getElementById(`${containerId}-after`);
+
+                    let currentValue = initial;
+                    let isDragging = false;
+                    let startY = 0;
+                    let isEnabled = true;
+                    let isAnimating = false;
+                    
+                    const formatValue = (val) => `${val.toFixed(step < 1 ? 1 : 0)}${unit}`;
+                    
+                    const createCardContent = (value) => `
+                        <div class="roller-top"><span>${formatValue(value)}</span></div>
+                        <div class="roller-bottom"><span>${formatValue(value)}</span></div>
+                    `;
+
+                    const setValue = (val, animate = false) => {
+                        if (isAnimating) return;
+                        const newValue = Math.round(Math.max(min, Math.min(max, val)) / step) * step;
+                        if (newValue === currentValue && !animate) {
+                           beforeCard.innerHTML = createCardContent(currentValue);
+                           afterCard.innerHTML = '';
+                           return;
+                        }
+                        
+                        if (animate) {
+                           isAnimating = true;
+                           
+                           const beforeValue = currentValue;
+                           const afterValue = newValue;
+
+                           beforeCard.innerHTML = createCardContent(beforeValue);
+                           afterCard.innerHTML = createCardContent(afterValue);
+                           
+                           flipper.classList.add('animating');
+                           
+                           flipper.addEventListener('animationend', () => {
+                               currentValue = newValue;
+                               beforeCard.innerHTML = createCardContent(currentValue);
+                               flipper.classList.remove('animating');
+                               afterCard.innerHTML = '';
+                               isAnimating = false;
+                           }, { once: true });
+
+                        } else {
+                           currentValue = newValue;
+                           beforeCard.innerHTML = createCardContent(currentValue);
+                           afterCard.innerHTML = '';
+                        }
+                    };
+
+                    const handleMove = (e) => {
+                        if (!isDragging || !isEnabled) return;
+                        e.preventDefault();
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                        const deltaY = startY - clientY;
+                        
+                        // Change value for every 20px of drag
+                        const valueChange = Math.floor(deltaY / 20);
+                        if (valueChange !== 0) {
+                            const newValue = currentValue + valueChange * step;
+                            startY = clientY; // Reset startY to prevent cumulative changes
+                            setValue(newValue, true);
+                        }
+                    };
+
+                    const stopDrag = () => {
+                        isDragging = false;
+                        document.removeEventListener('mousemove', handleMove);
+                        document.removeEventListener('mouseup', stopDrag);
+                        document.removeEventListener('touchmove', handleMove);
+                        document.removeEventListener('touchend', stopDrag);
+                    };
+                    
+                    const startDrag = (e) => {
+                        if (!isEnabled || isAnimating) return;
+                        isDragging = true;
+                        startY = e.touches ? e.touches[0].clientY : e.clientY;
+                        document.addEventListener('mousemove', handleMove);
+                        document.addEventListener('mouseup', stopDrag);
+                        document.addEventListener('touchmove', handleMove);
+                        document.addEventListener('touchend', stopDrag);
+                    };
+
+                    flipper.addEventListener('mousedown', startDrag);
+                    flipper.addEventListener('touchstart', startDrag);
+                    
+                    setValue(initial);
+
+                    return {
+                        getValue: () => currentValue,
+                        setEnabled: (enabled) => {
+                            isEnabled = enabled;
+                            flipper.classList.toggle('disabled', !enabled);
+                        }
+                    };
+                }
+            },
+            
             // --- MODULE FOR PEDIATRIC CALCULATOR ---
             PedsCalculator: {
-                data: [
-                    { medication: "Propofol", dose: "2.5-3.5 mg/kg IV", category: "Induction Agents" },
-                    { medication: "Etomidate", dose: "0.2-0.4 mg/kg IV", category: "Induction Agents" },
-                    { medication: "Ketamine", dose: "1-2 mg/kg IV, 4-6 mg/kg IM", category: "Induction Agents" },
-                    { medication: "Succinylcholine", dose: "1-2 mg/kg IV", category: "NMBAs" },
-                    { medication: "Rocuronium", dose: "0.6-1.2 mg/kg IV", category: "NMBAs" },
-                    { medication: "Vecuronium", dose: "0.08-0.1 mg/kg IV", category: "NMBAs" },
-                    { medication: "Cisatracurium", dose: "0.1-0.15 mg/kg IV", category: "NMBAs" },
-                    { medication: "Fentanyl", dose: "1-2 mcg/kg IV", category: "Pain Medications" },
-                    { medication: "Morphine", dose: "0.05-0.1 mg/kg IV", category: "Pain Medications" },
-                    { medication: "Hydromorphone", dose: "0.01-0.02 mg/kg IV", category: "Pain Medications" },
-                    { medication: "Ondansetron", dose: "0.1 mg/kg IV (max 4 mg)", category: "PONV Prophylaxis" },
-                    { medication: "Dexamethasone", dose: "0.1-0.5 mg/kg IV (max 8 mg)", category: "PONV Prophylaxis" },
-                    { medication: "Midazolam", dose: "0.05-0.1 mg/kg IV", category: "Sedation Medications" },
-                    { medication: "Dexmedetomidine", dose: "0.5-1 mcg/kg load over 10 min", category: "Sedation Medications" },
-                    { medication: "Epinephrine", dose: "1 mcg/kg IV for hypotension; 10 mcg/kg IV for cardiac arrest", category: "Emergency Medications" },
-                    { medication: "Phenylephrine", dose: "0.5-1 mcg/kg IV bolus", category: "Emergency Medications" },
-                    { medication: "Atropine", dose: "0.02 mg/kg IV (min 0.1 mg)", category: "Emergency Medications" },
+                 data: [
+                    { medication: "Midazolam (PO)", dose: "1 mg/kg", note: "max 20mg", category: "Pre-medications", color: "orange" },
+                    { medication: "Midazolam (IV)", dose: "0.1 mg/kg", note: "max 2mg", category: "Pre-medications", color: "orange" },
+                    { medication: "Propofol induction (IV)", dose: "3 mg/kg", category: "Induction Medications", color: "yellow" },
+                    { medication: "Ketamine induction (IV)", dose: "1 mg/kg", category: "Induction Medications", color: "yellow" },
+                    { medication: "Ketamine induction (IM)", dose: "4 mg/kg", category: "Induction Medications", color: "yellow" },
+                    { medication: "Lidocaine (IV)", dose: "1.5 mg/kg", note: "max 100mg", category: "Induction Medications" },
+                    { medication: "Succinylcholine RSI (IV)", dose: "2 mg/kg", category: "Induction Medications", color: "red" },
+                    { medication: "Succinylcholine RSI (IM)", dose: "5 mg/kg", category: "Induction Medications", color: "red" },
+                    { medication: "Rocuronium (IV)", dose: "0.6 mg/kg", category: "Induction Medications", color: "red" },
+                    { medication: "Rocuronium RSI (IV)", dose: "1.2 mg/kg", category: "Induction Medications", color: "red" },
+                    { medication: "Tylenol (IV)", dose: "10-15 mg/kg", note: "age-dependent", category: "Pain" },
+                    { medication: "Fentanyl (Intranasal)", dose: "2 mcg/kg", category: "Pain", color: "blue" },
+                    { medication: "Fentanyl (IV)", dose: "1.5 mcg/kg", category: "Pain", color: "blue" },
+                    { medication: "Morphine (IV)", dose: "0.05 mg/kg", category: "Pain", color: "blue" },
+                    { medication: "Hydromorphone (IV)", dose: "0.015 mg/kg", category: "Pain", color: "blue" },
+                    { medication: "Dexmedetomidine bolus (IV)", dose: "0.5 mcg/kg", note: "max 20mcg", category: "Pain", color: "yellow" },
+                    { medication: "Ketorolac (IV)", dose: "0.5 mg/kg", note: "max 30mg", category: "Pain" },
+                    { medication: "Dexamethasone (IV)", dose: "0.1 mg/kg", note: "max 10mg", category: "PONV Medications" },
+                    { medication: "Ondansetron (IV)", dose: "0.15 mg/kg", note: "max 4mg", category: "PONV Medications" },
+                    { medication: "Cefazolin (IV)", dose: "30 mg/kg", note: "weight-dependent max", category: "Antibiotics" },
+                    { medication: "Ephedrine (IV)", dose: "0.1 mg/kg", category: "Emergency Medications", color: "purple" },
+                    { medication: "Phenylephrine (IV)", dose: "1 mcg/kg", category: "Emergency Medications", color: "purple" },
+                    { medication: "Epinephrine (arrest) (IV/ETT)", dose: "10 mcg/kg", category: "Emergency Medications", color: "purple" },
+                    { medication: "Epinephrine (bolus or bronchospasm) (IV)", dose: "1 mcg/kg", category: "Emergency Medications", color: "purple" },
+                    { medication: "Atropine (IV)", dose: "0.02 mg/kg", note: "age-dependent max", category: "Emergency Medications", color: "green" },
+                    { medication: "Succinylcholine (Laryngospasm) (IV)", dose: "0.1 mg/kg", category: "Emergency Medications", color: "red" },
+                    { medication: "Succinylcholine (Laryngospasm) (IM)", dose: "0.5 mg/kg", category: "Emergency Medications", color: "red" },
+                    { medication: "Calcium", dose: "10 mg/kg", category: "Emergency Medications" },
+                    { medication: "Propofol (Laryngospasm)", dose: "1 mg/kg", category: "Emergency Medications", color: "yellow" },
                 ],
                 init() {
                     this.cacheDOMElements();
+                    
+                    this.ageRoller = App.RollerFactory.create('age-roller-container', { label: 'Age', min: 0, max: 18, initial: 5, step: 1 });
+                    this.weightRoller = App.RollerFactory.create('weight-roller-container', { label: 'Weight', min: 1, max: 150, initial: 20, step: 1, unit: 'kg' });
+                    this.heightRoller = App.RollerFactory.create('height-roller-container', { label: 'Height', min: 40, max: 220, initial: 110, step: 1, unit: 'cm' });
+
                     this.elements.calculateBtn.addEventListener('click', () => this.calculate());
+                    this.elements.pretermCheckbox.addEventListener('change', () => this.handlePreterm());
                 },
                 cacheDOMElements() {
                     this.elements = {
                         calculateBtn: document.getElementById('calculate-btn'),
-                        ageInput: document.getElementById('age'),
-                        weightInput: document.getElementById('weight'),
+                        ageUnitSelect: document.getElementById('age-unit'),
+                        pretermCheckbox: document.getElementById('preterm-checkbox'),
                         resultsDiv: document.getElementById('results'),
-                        ettSizeEl: document.getElementById('ett-size'),
+                        airwayResultsDiv: document.getElementById('airway-results'),
+                        vitalsResultsDiv: document.getElementById('vitals-results'),
                         medTableBody: document.getElementById('med-table-body'),
                     };
                 },
+                handlePreterm() {
+                    const isChecked = this.elements.pretermCheckbox.checked;
+                    this.ageRoller.setEnabled(!isChecked);
+                    this.elements.ageUnitSelect.disabled = isChecked;
+                },
                 calculate() {
-                    const age = parseFloat(this.elements.ageInput.value);
-                    const weight = parseFloat(this.elements.weightInput.value);
+                    const isPreterm = this.elements.pretermCheckbox.checked;
+                    const age = this.ageRoller.getValue();
+                    const ageUnit = this.elements.ageUnitSelect.value;
+                    const weight = this.weightRoller.getValue();
+                    const height = this.heightRoller.getValue();
 
-                    if (isNaN(age) || isNaN(weight) || age <= 0 || weight <= 0) {
-                        alert('Please enter valid age and weight.');
+                    if (isNaN(weight) || weight <= 0) {
+                        alert('Please enter a valid weight.');
                         return;
                     }
-
-                    // ETT Calculation
-                    if (age > 18) {
-                        this.elements.ettSizeEl.textContent = 'Formula is for patients up to 18 years old.';
-                    } else {
-                        const ettSize = 3.5 + (age / 4);
-                        const roundedEtt = (Math.round(ettSize * 2) / 2).toFixed(1);
-                        this.elements.ettSizeEl.textContent = `${roundedEtt} mm`;
+                    if (!isPreterm && (isNaN(age) || age < 0)) {
+                         alert('Please enter a valid age.');
+                         return;
                     }
-
-                    // Medication Table Calculation
-                    this.elements.medTableBody.innerHTML = '';
-                    this.data.forEach(med => {
-                        const row = document.createElement('tr');
-                        const calculatedDose = this.calculateDose(med.dose, weight);
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${med.medication}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${med.dose}</td>
-                        `;
-                        this.elements.medTableBody.appendChild(row);
-                    });
+                    
+                    let ageInYears = isPreterm ? -1 : (ageUnit === 'years' ? age : age / 12);
+                    
+                    this.calculateAirway(ageInYears, height, isPreterm);
+                    this.calculateVitals(ageInYears, weight, isPreterm);
+                    this.calculateMedications(weight, ageInYears);
 
                     this.elements.resultsDiv.classList.remove('hidden');
                 },
-                calculateDose(doseString, weight) {
-                    const doseMatch = doseString.match(/([\d\.-]+)/g) || [];
-                    const numbers = doseMatch.map(parseFloat);
+                calculateAirway(ageInYears, height, isPreterm) {
+                    let ettCuffed, etDepth, laryngoscope, lma, mask;
+                    let ettCuffedValueForDepth = 0;
 
+                    if (isPreterm) {
+                        ettCuffed = "2.5 - 3.0"; ettCuffedValueForDepth = 2.75;
+                    } else if (ageInYears < (1/12)) {
+                        ettCuffed = "3.0"; ettCuffedValueForDepth = 3.0;
+                    } else if (ageInYears < 1) {
+                        ettCuffed = "3.5"; ettCuffedValueForDepth = 3.5;
+                    } else if (ageInYears < 12) {
+                        const calculatedEtt = (ageInYears / 4) + 3.5;
+                        ettCuffed = (Math.round(calculatedEtt * 2) / 2).toFixed(1);
+                        ettCuffedValueForDepth = parseFloat(ettCuffed);
+                    } else {
+                        if (isNaN(height)) { ettCuffed = "Height required";
+                        } else if (height < 150) { ettCuffed = "< 6.5";
+                        } else if (height >= 150 && height < 160) { ettCuffed = "6.5"; ettCuffedValueForDepth = 6.5;
+                        } else if (height >= 160 && height < 175) { ettCuffed = "7.0"; ettCuffedValueForDepth = 7.0;
+                        } else if (height >= 175 && height < 185) { ettCuffed = "7.5"; ettCuffedValueForDepth = 7.5;
+                        } else { ettCuffed = "8.0"; ettCuffedValueForDepth = 8.0; }
+                    }
+
+                    etDepth = ettCuffedValueForDepth > 0 ? (3 * ettCuffedValueForDepth).toFixed(1) + " cm" : "N/A";
+
+                    if (isPreterm) laryngoscope = "Miller 00";
+                    else if (ageInYears < (1/12)) laryngoscope = "Miller 0";
+                    else if (ageInYears < 1) laryngoscope = "Miller 1";
+                    else if (ageInYears < 4) laryngoscope = "Miller 1.5";
+                    else laryngoscope = "Miller 2";
+
+                    if (isPreterm) lma = "1";
+                    else if (ageInYears < (1/12)) lma = "1";
+                    else if (ageInYears < 1) lma = "1.5";
+                    else if (ageInYears < 5) lma = "2";
+                    else if (ageInYears < 8) lma = "2.5";
+                    else lma = "3+";
+
+                    if (isPreterm) {
+                        mask = "0";
+                    } else if (ageInYears < (1/12)) { // 0-1 month
+                        mask = "1";
+                    } else if (ageInYears < 3) { // 1 month to 2 years
+                        mask = "2";
+                    } else if (ageInYears < 5) { // 3-4 years
+                        mask = "3";
+                    } else if (ageInYears < 8) { // 5-7 years
+                        mask = "4";
+                    } else { // 8+ years
+                        mask = "5 (Adult)";
+                    }
+
+                    this.elements.airwayResultsDiv.innerHTML = `
+                        <div><dt class="text-sm font-medium text-gray-500">ETT (cuffed)</dt><dd class="mt-1 text-lg font-semibold text-indigo-600">${ettCuffed}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">ET Depth</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${etDepth}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">Laryngoscope</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${laryngoscope}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">LMA #</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${lma}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">Mask #</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${mask}</dd></div>
+                    `;
+                },
+                calculateVitals(ageInYears, weight, isPreterm) {
+                    let bp, rr, hr, ebv, hct;
+
+                    if (isPreterm) {
+                        bp = "PCA in wks"; rr = "30-60"; hr = "100-180"; ebv = 100 * weight; hct = "45 (40-55)";
+                    } else if (ageInYears < (1/12)) {
+                        bp = "40"; rr = "40-55"; hr = "140"; ebv = 90 * weight; hct = "55 (40-60)";
+                    } else if (ageInYears < 1) {
+                        bp = "40"; rr = "25-45"; hr = "120"; ebv = 80 * weight; hct = "36 (28-42)";
+                    } else if (ageInYears < 4) {
+                        bp = Math.round(Math.min(65, 40 + (2 * ageInYears))); rr = "18-35"; hr = "110"; ebv = 75 * weight; hct = "38 (32-45)";
+                    } else if (ageInYears < 8) {
+                        bp = Math.round(Math.min(65, 40 + (2 * ageInYears))); rr = "16-30"; hr = "100"; ebv = 70 * weight; hct = "38 (32-45)";
+                    } else {
+                        bp = Math.round(Math.min(65, 40 + (2 * ageInYears))); rr = "12-20"; hr = "80"; ebv = 70 * weight; hct = "38 (32-45)";
+                    }
+
+                    this.elements.vitalsResultsDiv.innerHTML = `
+                        <div><dt class="text-sm font-medium text-gray-500">BP (MAP)</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${bp}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">RR</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${rr}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">HR</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${hr}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">EBV (mL)</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${Math.round(ebv)}</dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500">Hct</dt><dd class="mt-1 text-lg font-semibold text-gray-900">${hct}</dd></div>
+                    `;
+                },
+                calculateMedications(weight, ageInYears) {
+                    this.elements.medTableBody.innerHTML = '';
+                    let currentCategory = "";
+                    const colorMap = {
+                        orange: 'bg-orange-200', yellow: 'bg-yellow-200', blue: 'bg-blue-200',
+                        purple: 'bg-purple-200', green: 'bg-green-200', red: 'bg-red-200'
+                    };
+
+                    this.data.forEach(med => {
+                        if (med.category !== currentCategory) {
+                            currentCategory = med.category;
+                            const categoryRow = document.createElement('tr');
+                            categoryRow.innerHTML = `<td colspan="3" class="px-6 py-3 bg-gray-200 text-sm font-bold text-gray-800">${currentCategory}</td>`;
+                            this.elements.medTableBody.appendChild(categoryRow);
+                        }
+
+                        const row = document.createElement('tr');
+                        const calculatedDose = this.calculateDose(med, weight, ageInYears);
+                        const fullDoseString = med.note ? `${med.dose} (${med.note})` : med.dose;
+                        const colorClass = med.color ? colorMap[med.color] : '';
+                        
+                        if (colorClass) row.classList.add(colorClass);
+                        
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${med.medication}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${fullDoseString}</td>
+                        `;
+                        this.elements.medTableBody.appendChild(row);
+                    });
+                },
+                calculateDose(med, weight, ageInYears) {
+                    const { medication, dose, note } = med;
+                    const format = (num) => (num < 1 ? num.toFixed(2) : Math.round(num).toString());
+
+                    // --- Special Cases ---
+                    if (medication.includes("Tylenol")) {
+                        const dosePerKg = ageInYears < 2 ? 10 : 15;
+                        const calculatedDose = dosePerKg * weight;
+                        const finalDose = Math.min(calculatedDose, 1000);
+                        return `${format(finalDose)} mg`;
+                    }
+                    if (medication.includes("Cefazolin")) {
+                        const calculatedDose = 30 * weight;
+                        const maxDose = weight < 120 ? 2000 : 3000;
+                        const finalDose = Math.min(calculatedDose, maxDose);
+                        return `${format(finalDose)} mg`;
+                    }
+                    if (medication.includes("Atropine")) {
+                        const calculatedDose = 0.02 * weight;
+                        const maxDose = ageInYears < 12 ? 0.5 : 1.0;
+                        const finalDose = Math.min(calculatedDose, maxDose);
+                        return `${finalDose.toFixed(2)} mg`;
+                    }
+
+                    // --- Generic Parser ---
+                    const doseMatch = dose.match(/([\d\.-]+)/g) || [];
+                    const numbers = doseMatch.map(parseFloat);
                     if (numbers.length === 0) return 'N/A';
 
-                    let finalDose = '';
-                    
-                    if (doseString.includes('-')) {
-                        const low = (numbers[0] * weight).toFixed(2);
-                        const high = (numbers[1] * weight).toFixed(2);
-                        finalDose = `${low} - ${high}`;
-                    } else {
-                        finalDose = (numbers[0] * weight).toFixed(2);
-                    }
+                    let calculatedDoseValue = numbers[0] * weight;
 
-                    const unit = (doseString.match(/(mcg|mg)/) || ['unit'])[0];
-                    finalDose += ` ${unit}`;
-                    
-                    if (doseString.includes('max')) {
-                        const maxDose = parseFloat((doseString.match(/max ([\d\.]+)/) || [])[1]);
-                        const calculatedSingleDose = parseFloat(finalDose);
-                        if (!isNaN(maxDose) && calculatedSingleDose > maxDose) {
-                            finalDose = `${maxDose} ${unit} (max)`;
+                    if (note && note.includes('max')) {
+                        const maxDoseMatch = note.match(/max ([\d\.]+)/);
+                        if (maxDoseMatch && maxDoseMatch[1]) {
+                            const maxDose = parseFloat(maxDoseMatch[1]);
+                            if (!isNaN(maxDose)) {
+                                calculatedDoseValue = Math.min(calculatedDoseValue, maxDose);
+                            }
                         }
                     }
                     
-                    if (doseString.includes('min')) {
-                        const minDose = parseFloat((doseString.match(/min ([\d\.]+)/) || [])[1]);
-                        const calculatedSingleDose = parseFloat(finalDose);
-                        if (!isNaN(minDose) && calculatedSingleDose < minDose) {
-                            finalDose = `${minDose} ${unit} (min)`;
-                        }
-                    }
-
-                    return finalDose;
+                    const finalDoseText = format(calculatedDoseValue);
+                    const unit = (dose.match(/(mcg|mg)/) || ['unit'])[0];
+                    return `${finalDoseText} ${unit}`;
                 }
             },
 
@@ -289,7 +637,7 @@
                     { symptom: "Hypertension", content: `<h3>Key Points</h3><ul><li>Definition: Systolic blood pressure (SBP) > 160 mmHg, diastolic blood pressure (DBP) > 90 mmHg, or an elevation of 20-30% above the patient's baseline.</li><li>Primary Cause: Pain is the most common cause of secondary hypertension in the PACU.</li><li>Initial Approach: Management should always be directed at identifying and treating the underlying cause before initiating antihypertensive medications.</li></ul><h3>Common Secondary Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>A</td><td>Analgesic deficiency (Pain), Anxiety, Autonomic dysreflexia</td></tr><tr><td>B</td><td>Bladder distension, Disordered Breathing (Hypoxia, Hypercapnia)</td></tr><tr><td>C</td><td>Catecholamines (stress response), Cold (Hypothermia)</td></tr><tr><td>D</td><td>Drugs (e.g., vasopressors, ketamine), Drug withdrawal (β-blockers, α-agonists)</td></tr><tr><td>E</td><td>Emergence excitation, Elevated Intracranial Pressure (ICP), Excessive hydration</td></tr></table>` },
                     { symptom: "Hypotension", content: `<h3>Key Points</h3><ul><li>Definition: SBP < 90 mmHg, Mean Arterial Pressure (MAP) < 60 mmHg, or a drop of 20-30% below baseline.</li><li>Primary Cause: Most postoperative hypotension is due to hypovolemia and is responsive to fluid administration.</li><li>Initial Approach: Assess for signs of inadequate organ perfusion. A fluid challenge is appropriate for most patients.</li></ul><h3>Differential Diagnosis</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Decreased Preload</td><td>Hypovolemia (hemorrhage, third-spacing), Venodilation (neuraxial/residual anesthetics), Increased intrathoracic pressure</td></tr><tr><td>Decreased Cardiac Output</td><td>Bradycardia, Tachyarrhythmias, Myocardial ischemia/infarction, Cardiac tamponade</td></tr><tr><td>Decreased SVR</td><td>Sepsis, Anaphylaxis, SIRS, Adrenal insufficiency</td></tr></table>` },
                     { symptom: "Dysrhythmia", content: `<h3>Key Points</h3><ul><li>New perioperative dysrhythmias require prompt assessment of adequacy of ventilation, hemodynamics, electrolytes, and possible cardiac ischemia.</li><li>Atrial fibrillation is common and often related to atrial stretch from volume shifts.</li><li>Many dysrhythmias are transient and require only supportive care.</li></ul><h3>Management of Stable Dysrhythmia</h3><ul><li>Stable Bradycardia: Atropine 0.5-1 mg IV.</li><li>Stable SVT: Vagal maneuvers, then Adenosine 6-12 mg IV.</li><li>Stable Atrial Fibrillation/Flutter: Rate control with Metoprolol 1-5 mg IV or Diltiazem.</li><li>Stable Wide-Complex Tachycardia: Consider VT. Amiodarone 150 mg IV over 10 min.</li></ul>` },
-                    { symptom: "Hypoxia", content: `<h3>Key Points</h3><ul><li>Very Common: Hypoxia (SpO2 < 92%) is a frequent PACU event.</li><li>Primary Causes: Hypoventilation and ateletasis are the most common culprits.</li><li>Initial Response: Most cases respond to simple maneuvers and supplemental oxygen.</li></ul><h3>Common Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Airway Obstruction</td><td>Tongue falling back, laryngospasm, edema, hematoma.</td></tr><tr><td>Parenchymal/Vascular</td><td>Atelectasis, pulmonary edema, pulmonary embolism, aspiration pneumonitis.</td></tr><tr><td>Ventilatory Failure</td><td>Hypoventilation from residual anesthetics, opioids, or neuromuscular blockade.</td></tr><tr><td>Other</td><td>Bronchospasm, pneumothorax.</td></tr></table>` },
+                    { symptom: "Hypoxia", content: `<h3>Key Points</h3><ul><li>Very Common: Hypoxia (SpO2 < 92%) is a frequent PACU event.</li><li>Primary Causes: Hypovolemia and atelectasis are the most common culprits.</li><li>Initial Response: Most cases respond to simple maneuvers and supplemental oxygen.</li></ul><h3>Common Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Airway Obstruction</td><td>Tongue falling back, laryngospasm, edema, hematoma.</td></tr><tr><td>Parenchymal/Vascular</td><td>Atelectasis, pulmonary edema, pulmonary embolism, aspiration pneumonitis.</td></tr><tr><td>Ventilatory Failure</td><td>Hypoventilation from residual anesthetics, opioids, or neuromuscular blockade.</td></tr><tr><td>Other</td><td>Bronchospasm, pneumothorax.</td></tr></table>` },
                     { symptom: "Wheezing and Stridor", content: `<h3>Key Points</h3><ul><li>Stridor is an airway emergency, indicating upper airway obstruction.</li><li>Wheezing indicates lower airway obstruction (bronchoconstriction).</li><li>Distinguish the two: Stridor is a high-pitched inspiratory sound (neck). Wheezing is a musical, expiratory sound (chest).</li></ul><h3>Management</h3><ul><li>Stridor: Administer 100% O2 with CPAP. Consider racemic epinephrine, steroids. High suspicion for hematoma after neck surgery. Prepare to re-intubate.</li><li>Wheezing: Administer inhaled beta-agonist (e.g., Albuterol). Consider cause (asthma, anaphylaxis, pulmonary edema).</li></ul>` },
                     { symptom: "Delirium", content: `<h3>Key Points</h3><ul><li>Definition: An acute disturbance in attention and cognition with a fluctuating course.</li><li>Initial Approach: Rule out and correct life-threatening causes, especially hypoxia, hypotension, and hypoglycemia.</li></ul><h3>Common Reversible Causes ("PACU" Mnemonic)</h3><ul><li>P: Pain</li><li>A: Anxiety, Alcohol withdrawal</li><li>C: Constipation / Full Bladder</li><li>U: Underlying Illness (Hypoxia, Hypoglycemia, Hypotension, Infection)</li></ul>` },
                     { symptom: "Delayed Emergence", content: `<h3>Key Points</h3><ul><li>Definition: Failure to regain consciousness 30-60 minutes after the end of anesthesia.</li><li>Common Causes: Residual drug effects and metabolic disturbances.</li></ul><h3>Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Pharmacologic</td><td>Residual anesthetics, Opioids, Benzodiazepines, Residual NMB.</td></tr><tr><td>Metabolic</td><td>Hypoglycemia, Hypoxia, Hypercarbia, Hypothermia.</td></tr><tr><td>Neurologic</td><td>Stroke, Seizure, Increased ICP.</td></tr></table>` },
@@ -356,4 +704,6 @@
     </script>
 </body>
 </html>
+
+
 
