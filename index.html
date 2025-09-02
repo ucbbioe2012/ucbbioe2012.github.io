@@ -906,9 +906,42 @@
                         this.elements.navContainer.appendChild(categoryContainer);
                     }
                 },
+                // --- REPLACE this function ---
                 displayPlan(plan) {
-                    this.elements.displayContainer.innerHTML = `<h2>${plan.title}</h2>${plan.content}`;
+                    // Hide the search bar and navigation list
+                    this.elements.searchInput.classList.add('hidden');
+                    this.elements.navContainer.classList.add('hidden');
+
+                    // Expand the display container to full width
+                    this.elements.displayContainer.classList.remove('md:col-span-8');
+                    this.elements.displayContainer.classList.add('md:col-span-12');
+                    
+                    // Set the content, including a new "Back to List" button
+                    this.elements.displayContainer.innerHTML = `
+                        <button id="back-to-plan-list-btn" class="mb-4 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            &larr; Back to List
+                        </button>
+                        <h2>${plan.title}</h2>
+                        ${plan.content}
+                    `;
+
+                    // Add a click listener to the new button to show the list again
+                    document.getElementById('back-to-plan-list-btn').addEventListener('click', () => this.showPlanList());
                 },
+                // --- ADD this new function ---
+                showPlanList() {
+                    // Show the search bar and navigation list again
+                    this.elements.searchInput.classList.remove('hidden');
+                    this.elements.navContainer.classList.remove('hidden');
+
+                    // Revert the display container to its original width
+                    this.elements.displayContainer.classList.remove('md:col-span-12');
+                    this.elements.displayContainer.classList.add('md:col-span-8');
+
+                    // Reset the display container's content
+                    this.elements.displayContainer.innerHTML = `<p class="text-gray-500">Select a plan from the left to view details.</p>`;
+                },
+                // --- handleSearch function remains unchanged ---
                 handleSearch() {
                     const query = this.elements.searchInput.value.toLowerCase().trim();
                     const navItems = this.elements.navContainer.querySelectorAll('div.mb-4');
@@ -920,8 +953,6 @@
 
                         planList.querySelectorAll('li').forEach(planItem => {
                             const planTitle = planItem.textContent.toLowerCase();
-                            // In a real app, you would pre-process and store plain text content
-                            // For this implementation, we'll find the data object again.
                             const planData = this.data.find(p => p.title.toLowerCase() === planTitle);
                             const planContent = this.stripHtml(planData.content).toLowerCase();
                             
@@ -935,7 +966,7 @@
                         
                         if(categoryVisible) {
                             categoryContainer.style.display = 'block';
-                            planList.classList.remove('hidden'); // Expand category on search match
+                            planList.classList.remove('hidden');
                             categoryHeader.querySelector('svg').classList.add('rotate-180');
                         } else {
                             categoryContainer.style.display = 'none';
@@ -943,7 +974,6 @@
                     });
                 }
             }
-        };
 
         // --- START THE APP ---
         document.addEventListener('DOMContentLoaded', () => App.init());
