@@ -37,37 +37,62 @@
         .pacu-content th, .pacu-content td { border: 1px solid #cbd5e1; padding: 0.5rem; text-align: left; }
         .pacu-content th { background-color: #f1f5f9; }
         
-        /* --- Flippable Roller Styles --- */
+        /* --- Smooth Roller Styles --- */
         .roller-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
-        .roller-flipper {
-            position: relative;
+        .roller-window {
             height: 60px;
-            width: 90px;
-            perspective: 500px;
-            cursor: ns-resize;
-        }
-        .roller-flipper.disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .roller-card {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            font-size: 2.25rem;
-            font-weight: 700;
-            line-height: 60px;
-            text-align: center;
+            width: 100px;
             background-color: #f9fafb;
             border: 1px solid #d1d5db;
             border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+            cursor: ns-resize;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            backface-visibility: hidden; /* Important for clean flips */
+        }
+        .roller-window.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            background-color: #e5e7eb;
+        }
+        .roller-reel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transition: transform 0.2s ease-out; /* Animation */
+        }
+        .roller-number {
+            height: 60px; /* Must match window height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        /* Fading effect for numbers outside the center */
+        .roller-window::before, .roller-window::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 20px;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .roller-window::before {
+            top: 0;
+            background: linear-gradient(to bottom, #f9fafb, rgba(249, 250, 251, 0));
+        }
+        .roller-window::after {
+            bottom: 0;
+            background: linear-gradient(to top, #f9fafb, rgba(249, 250, 251, 0));
         }
         .roller-label {
             margin-top: 0.5rem;
@@ -76,45 +101,6 @@
             color: #4b5563;
         }
 
-        /* Animation Setup */
-        .roller-top {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 50%;
-            overflow: hidden;
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-        }
-        .roller-bottom {
-            position: absolute;
-            top: 50%; left: 0;
-            width: 100%; height: 50%;
-            overflow: hidden;
-            border-bottom-left-radius: 0.5rem;
-            border-bottom-right-radius: 0.5rem;
-        }
-        .roller-bottom span {
-            display: block;
-            transform: translateY(-50%);
-        }
-
-        .roller-flipper.animating .before .roller-top {
-            transform-origin: bottom center;
-            animation: flip-up-top 0.3s ease-in forwards;
-        }
-        .roller-flipper.animating .after .roller-bottom {
-            transform-origin: top center;
-            transform: rotateX(90deg);
-            animation: flip-up-bottom 0.3s ease-in-out 0.3s forwards;
-        }
-        
-        @keyframes flip-up-top {
-            to { transform: rotateX(-90deg); }
-        }
-        @keyframes flip-up-bottom {
-            from { transform: rotateX(90deg); }
-            to { transform: rotateX(0deg); }
-        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -278,63 +264,40 @@
                     const container = document.getElementById(containerId);
                     
                     container.innerHTML = `
-                        <div class="roller-flipper" id="${containerId}-flipper">
-                            <div class="roller-card before" id="${containerId}-before"></div>
-                            <div class="roller-card after" id="${containerId}-after"></div>
+                        <div class="roller-window" id="${containerId}-window">
+                            <div class="roller-reel" id="${containerId}-reel"></div>
                         </div>
                         <span class="roller-label">${label}</span>
                     `;
 
-                    const flipper = document.getElementById(`${containerId}-flipper`);
-                    const beforeCard = document.getElementById(`${containerId}-before`);
-                    const afterCard = document.getElementById(`${containerId}-after`);
-
+                    const rollerWindow = document.getElementById(`${containerId}-window`);
+                    const reel = document.getElementById(`${containerId}-reel`);
+                    
                     let currentValue = initial;
                     let isDragging = false;
                     let startY = 0;
+                    let startValue = 0;
                     let isEnabled = true;
-                    let isAnimating = false;
-                    
-                    const formatValue = (val) => `${val.toFixed(step < 1 ? 1 : 0)}${unit}`;
-                    
-                    const createCardContent = (value) => `
-                        <div class="roller-top"><span>${formatValue(value)}</span></div>
-                        <div class="roller-bottom"><span>${formatValue(value)}</span></div>
-                    `;
+                    const itemHeight = 60; // Corresponds to .roller-number height
 
-                    const setValue = (val, animate = false) => {
-                        if (isAnimating) return;
-                        const newValue = Math.round(Math.max(min, Math.min(max, val)) / step) * step;
-                        if (newValue === currentValue && !animate) {
-                           beforeCard.innerHTML = createCardContent(currentValue);
-                           afterCard.innerHTML = '';
-                           return;
-                        }
+                    // Generate the number reel
+                    for (let i = min; i <= max; i += step) {
+                        const numberEl = document.createElement('div');
+                        numberEl.className = 'roller-number';
+                        numberEl.textContent = `${i.toFixed(step < 1 ? 1 : 0)}${unit}`;
+                        reel.appendChild(numberEl);
+                    }
+
+                    const setValue = (val, animate = true) => {
+                        const constrainedVal = Math.max(min, Math.min(max, val));
+                        const newValue = Math.round(constrainedVal / step) * step;
+                        currentValue = newValue;
                         
-                        if (animate) {
-                           isAnimating = true;
-                           
-                           const beforeValue = currentValue;
-                           const afterValue = newValue;
-
-                           beforeCard.innerHTML = createCardContent(beforeValue);
-                           afterCard.innerHTML = createCardContent(afterValue);
-                           
-                           flipper.classList.add('animating');
-                           
-                           flipper.addEventListener('animationend', () => {
-                               currentValue = newValue;
-                               beforeCard.innerHTML = createCardContent(currentValue);
-                               flipper.classList.remove('animating');
-                               afterCard.innerHTML = '';
-                               isAnimating = false;
-                           }, { once: true });
-
-                        } else {
-                           currentValue = newValue;
-                           beforeCard.innerHTML = createCardContent(currentValue);
-                           afterCard.innerHTML = '';
-                        }
+                        const targetIndex = (newValue - min) / step;
+                        const translateY = -targetIndex * itemHeight;
+                        
+                        reel.style.transition = animate ? 'transform 0.2s ease-out' : 'none';
+                        reel.style.transform = `translateY(${translateY}px)`;
                     };
 
                     const handleMove = (e) => {
@@ -343,13 +306,11 @@
                         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                         const deltaY = startY - clientY;
                         
-                        // Change value for every 20px of drag
-                        const valueChange = Math.floor(deltaY / 20);
-                        if (valueChange !== 0) {
-                            const newValue = currentValue + valueChange * step;
-                            startY = clientY; // Reset startY to prevent cumulative changes
-                            setValue(newValue, true);
-                        }
+                        const sensitivity = 5; // Lower is more sensitive
+                        const valueChange = deltaY / sensitivity;
+                        
+                        const newValue = startValue + valueChange;
+                        setValue(newValue, false); // No animation while dragging
                     };
 
                     const stopDrag = () => {
@@ -358,28 +319,32 @@
                         document.removeEventListener('mouseup', stopDrag);
                         document.removeEventListener('touchmove', handleMove);
                         document.removeEventListener('touchend', stopDrag);
+                        // Snap to nearest value on release
+                        setValue(currentValue, true);
                     };
                     
                     const startDrag = (e) => {
-                        if (!isEnabled || isAnimating) return;
+                        if (!isEnabled) return;
                         isDragging = true;
                         startY = e.touches ? e.touches[0].clientY : e.clientY;
+                        startValue = currentValue;
+                        reel.style.transition = 'none'; // Disable transition during drag
                         document.addEventListener('mousemove', handleMove);
                         document.addEventListener('mouseup', stopDrag);
                         document.addEventListener('touchmove', handleMove);
                         document.addEventListener('touchend', stopDrag);
                     };
 
-                    flipper.addEventListener('mousedown', startDrag);
-                    flipper.addEventListener('touchstart', startDrag);
+                    rollerWindow.addEventListener('mousedown', startDrag);
+                    rollerWindow.addEventListener('touchstart', startDrag);
                     
-                    setValue(initial);
+                    setValue(initial, false); // Set initial position without animation
 
                     return {
                         getValue: () => currentValue,
                         setEnabled: (enabled) => {
                             isEnabled = enabled;
-                            flipper.classList.toggle('disabled', !enabled);
+                            rollerWindow.classList.toggle('disabled', !enabled);
                         }
                     };
                 }
@@ -483,12 +448,17 @@
                         ettCuffed = (Math.round(calculatedEtt * 2) / 2).toFixed(1);
                         ettCuffedValueForDepth = parseFloat(ettCuffed);
                     } else {
-                        if (isNaN(height)) { ettCuffed = "Height required";
-                        } else if (height < 150) { ettCuffed = "< 6.5";
-                        } else if (height >= 150 && height < 160) { ettCuffed = "6.5"; ettCuffedValueForDepth = 6.5;
-                        } else if (height >= 160 && height < 175) { ettCuffed = "7.0"; ettCuffedValueForDepth = 7.0;
-                        } else if (height >= 175 && height < 185) { ettCuffed = "7.5"; ettCuffedValueForDepth = 7.5;
-                        } else { ettCuffed = "8.0"; ettCuffedValueForDepth = 8.0; }
+                        if (isNaN(height)) { 
+                            ettCuffed = "Height required";
+                        } else if (height < 160) { 
+                            ettCuffed = "6.5"; ettCuffedValueForDepth = 6.5;
+                        } else if (height >= 160 && height < 175) { 
+                            ettCuffed = "7.0"; ettCuffedValueForDepth = 7.0;
+                        } else if (height >= 175 && height < 185) { 
+                            ettCuffed = "7.5"; ettCuffedValueForDepth = 7.5;
+                        } else { 
+                            ettCuffed = "8.0"; ettCuffedValueForDepth = 8.0; 
+                        }
                     }
 
                     etDepth = ettCuffedValueForDepth > 0 ? (3 * ettCuffedValueForDepth).toFixed(1) + " cm" : "N/A";
@@ -640,7 +610,7 @@
                     { symptom: "Hypoxia", content: `<h3>Key Points</h3><ul><li>Very Common: Hypoxia (SpO2 < 92%) is a frequent PACU event.</li><li>Primary Causes: Hypovolemia and atelectasis are the most common culprits.</li><li>Initial Response: Most cases respond to simple maneuvers and supplemental oxygen.</li></ul><h3>Common Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Airway Obstruction</td><td>Tongue falling back, laryngospasm, edema, hematoma.</td></tr><tr><td>Parenchymal/Vascular</td><td>Atelectasis, pulmonary edema, pulmonary embolism, aspiration pneumonitis.</td></tr><tr><td>Ventilatory Failure</td><td>Hypoventilation from residual anesthetics, opioids, or neuromuscular blockade.</td></tr><tr><td>Other</td><td>Bronchospasm, pneumothorax.</td></tr></table>` },
                     { symptom: "Wheezing and Stridor", content: `<h3>Key Points</h3><ul><li>Stridor is an airway emergency, indicating upper airway obstruction.</li><li>Wheezing indicates lower airway obstruction (bronchoconstriction).</li><li>Distinguish the two: Stridor is a high-pitched inspiratory sound (neck). Wheezing is a musical, expiratory sound (chest).</li></ul><h3>Management</h3><ul><li>Stridor: Administer 100% O2 with CPAP. Consider racemic epinephrine, steroids. High suspicion for hematoma after neck surgery. Prepare to re-intubate.</li><li>Wheezing: Administer inhaled beta-agonist (e.g., Albuterol). Consider cause (asthma, anaphylaxis, pulmonary edema).</li></ul>` },
                     { symptom: "Delirium", content: `<h3>Key Points</h3><ul><li>Definition: An acute disturbance in attention and cognition with a fluctuating course.</li><li>Initial Approach: Rule out and correct life-threatening causes, especially hypoxia, hypotension, and hypoglycemia.</li></ul><h3>Common Reversible Causes ("PACU" Mnemonic)</h3><ul><li>P: Pain</li><li>A: Anxiety, Alcohol withdrawal</li><li>C: Constipation / Full Bladder</li><li>U: Underlying Illness (Hypoxia, Hypoglycemia, Hypotension, Infection)</li></ul>` },
-                    { symptom: "Delayed Emergence", content: `<h3>Key Points</h3><ul><li>Definition: Failure to regain consciousness 30-60 minutes after the end of anesthesia.</li><li>Common Causes: Residual drug effects and metabolic disturbances.</li></ul><h3>Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Pharmacologic</td><td>Residual anesthetics, Opioids, Benzodiazepines, Residual NMB.</td></tr><tr><td>Metabolic</td><td>Hypoglycemia, Hypoxia, Hypercarbia, Hypothermia.</td></tr><tr><td>Neurologic</td><td>Stroke, Seizure, Increased ICP.</td></tr></table>` },
+                    { symptom: "Delayed Emergence", content: `<h3>Key Points</h3><ul><li>Definition: Failure to regain consciousness 30-60 minutes after the end of anesthesia.</li><li>Common Causes: Residual drug effects and metabolic disturbances.</li></ul><h3>Causes</h3><table><tr><th>Category</th><th>Common Causes</th></tr><tr><td>Pharmacologic</td><td>Residual anesthetics, Opioids, Benzodiazepines, Residual NMB.</li></tr><tr><td>Metabolic</td><td>Hypoglycemia, Hypoxia, Hypercarbia, Hypothermia.</td></tr><tr><td>Neurologic</td><td>Stroke, Seizure, Increased ICP.</li></table>` },
                     { symptom: "Shivering", content: `<h3>Key Points</h3><ul><li>High Incidence: Very common after anesthesia.</li><li>Physiologic Stress: Dramatically increases oxygen consumption.</li></ul><h3>Management</h3><ol><li>Rule out other causes of shaking (rigors, seizure).</li><li>Assess core temperature. If hypothermic (<36.0°C), begin active rewarming.</li><li>Pharmacological Treatment (if normothermic): Meperidine 12.5-25 mg IV. Alternatives include Clonidine 30-75 mcg IV or Fentanyl 25-50 mcg IV.</li></ol>` },
                     { symptom: "Nausea & Vomiting (PONV)", content: `<h3>Key Points</h3><ul><li>Very Common. Leading cause of patient dissatisfaction.</li><li>Rescue Therapy: For breakthrough PONV, use an antiemetic from a different mechanistic class than the prophylactic agent(s).</li></ul><h3>Rescue Antiemetic Classes</h3><ul><li>5-HT3 Antagonist: Ondansetron</li><li>Dopamine Antagonist: Droperidol, Prochlorperazine</li><li>Antihistamine: Diphenhydramine</li><li>Steroid: Dexamethasone</li></ul>` },
                     { symptom: "Pain", content: `<h3>Key Points</h3><ul><li>Multimodal Analgesia is the Standard of Care.</li><li>Assessment is Key. Use a validated pain scale.</li></ul><h3>Approach for Severe Pain (7-10/10)</h3><ol><li>Administer small, frequent doses of a titrated IV opioid (Morphine 1-4 mg, Hydromorphone 0.2-1 mg, or Fentanyl 25-50 mcg).</li><li>Reassess pain and sedation after each dose.</li><li>Administer a non-opioid analgesic (e.g., Ketorolac 15-30 mg IV or Acetaminophen 1g IV) as a baseline.</li></ol>` }
@@ -704,6 +674,4 @@
     </script>
 </body>
 </html>
-
-
 
