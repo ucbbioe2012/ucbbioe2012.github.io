@@ -72,7 +72,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.25rem;
+            font-size: 1.875rem; /* Reduced font size */
             font-weight: 700;
             color: #1f2937;
         }
@@ -99,6 +99,49 @@
             font-size: 0.875rem;
             font-weight: 500;
             color: #4b5563;
+        }
+
+        /* --- Responsive Medication Table --- */
+        @media (max-width: 767px) {
+            #med-table thead {
+                display: none;
+            }
+            #med-table tbody, #med-table tr, #med-table td {
+                display: block;
+                width: 100%;
+            }
+            #med-table tr {
+                margin-bottom: 1rem;
+                border-bottom: 2px solid #e2e8f0;
+                padding-bottom: 1rem;
+            }
+            #med-table tr.category-row {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            #med-table td {
+                display: flex;
+                justify-content: space-between;
+                padding: 0.5rem 0.25rem;
+                text-align: right;
+                border-bottom: 1px dotted #ccc;
+            }
+            #med-table tr.category-row td {
+                display: block;
+                text-align: center;
+                padding: 0.75rem;
+                margin-top: 1rem;
+            }
+            #med-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                text-align: left;
+                padding-right: 1rem;
+            }
+            #med-table td:last-child {
+                border-bottom: none;
+            }
         }
 
     </style>
@@ -302,7 +345,7 @@
 
                     const handleMove = (e) => {
                         if (!isDragging || !isEnabled) return;
-                        e.preventDefault();
+                        e.preventDefault(); // Prevent page scroll
                         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                         const deltaY = startY - clientY;
                         
@@ -331,12 +374,12 @@
                         reel.style.transition = 'none'; // Disable transition during drag
                         document.addEventListener('mousemove', handleMove);
                         document.addEventListener('mouseup', stopDrag);
-                        document.addEventListener('touchmove', handleMove);
+                        document.addEventListener('touchmove', handleMove, { passive: false });
                         document.addEventListener('touchend', stopDrag);
                     };
 
                     rollerWindow.addEventListener('mousedown', startDrag);
-                    rollerWindow.addEventListener('touchstart', startDrag);
+                    rollerWindow.addEventListener('touchstart', startDrag, { passive: false });
                     
                     setValue(initial, false); // Set initial position without animation
 
@@ -535,6 +578,7 @@
                         if (med.category !== currentCategory) {
                             currentCategory = med.category;
                             const categoryRow = document.createElement('tr');
+                            categoryRow.className = 'category-row';
                             categoryRow.innerHTML = `<td colspan="3" class="px-6 py-3 bg-gray-200 text-sm font-bold text-gray-800">${currentCategory}</td>`;
                             this.elements.medTableBody.appendChild(categoryRow);
                         }
@@ -547,9 +591,9 @@
                         if (colorClass) row.classList.add(colorClass);
                         
                         row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${med.medication}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${fullDoseString}</td>
+                            <td data-label="Medication" class="px-6 py-4 whitespace-nowrap text-sm font-medium">${med.medication}</td>
+                            <td data-label="Calculated Dose" class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${calculatedDose}</td>
+                            <td data-label="Dose Range" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${fullDoseString}</td>
                         `;
                         this.elements.medTableBody.appendChild(row);
                     });
